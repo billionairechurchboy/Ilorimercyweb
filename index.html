@@ -403,6 +403,21 @@
     .reveal, .reveal.in{opacity:1 !important;transform:none !important;transition:none !important;}
     html{scroll-behavior:auto;}
   }
+
+  /* ===== payment modal ===== */
+  .pay-modal-overlay{position:fixed;inset:0;background:rgba(43,33,29,.55);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;}
+  .pay-modal-overlay.open{display:flex;}
+  .pay-modal{background:#fff;max-width:420px;width:100%;padding:36px 32px;position:relative;}
+  .pay-modal h3{margin-bottom:6px;}
+  .pay-modal .pay-modal-service{color:var(--primary);font-weight:600;margin-bottom:4px;}
+  .pay-modal .pay-modal-amount{font-family:var(--serif);font-size:28px;margin-bottom:20px;color:var(--text);}
+  .pay-modal label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--secondary);}
+  .pay-modal input[type="email"], .pay-modal input[type="text"]{
+    width:100%;padding:12px 14px;border:1px solid var(--line);background:var(--bg);font-family:var(--sans);font-size:14.5px;margin-bottom:16px;
+  }
+  .pay-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;line-height:1;color:var(--secondary);cursor:pointer;}
+  .pay-modal-error{color:#b3261e;font-size:13px;margin:-8px 0 14px;display:none;}
+  .service-cta{display:flex;flex-wrap:wrap;gap:10px;}
 </style>
 </head>
 <body>
@@ -551,7 +566,7 @@
             <span class="service-price">&#8358;50,000</span>
           </div>
           <div class="service-cta">
-            <a href="#contact" class="btn btn-outline btn-sm service-link" data-service="Preorder Business Setup (50k)">Start Preorder System</a>
+            <a href="#" class="btn btn-primary btn-sm pay-now-btn" data-service="Preorder Business Setup" data-amount="50000">Pay Now</a>
           </div>
         </div>
 
@@ -563,7 +578,7 @@
             <span class="service-price">&#8358;75,000</span>
           </div>
           <div class="service-cta">
-            <a href="#contact" class="btn btn-outline btn-sm service-link" data-service="Consultation (75k)">Book Consultation</a>
+            <a href="#" class="btn btn-primary btn-sm pay-now-btn" data-service="Consultation" data-amount="75000">Pay Now</a>
           </div>
         </div>
 
@@ -586,7 +601,7 @@
             <span class="service-price">&#8358;200,000</span>
           </div>
           <div class="service-cta">
-            <a href="#contact" class="btn btn-outline btn-sm service-link" data-service="One-on-One Coaching (200k)">Book 1-on-1 Class</a>
+            <a href="#" class="btn btn-primary btn-sm pay-now-btn" data-service="One-on-One Coaching" data-amount="200000">Pay Now</a>
           </div>
         </div>
 
@@ -598,7 +613,7 @@
             <span class="service-price">&#8358;500,000</span>
           </div>
           <div class="service-cta">
-            <a href="#contact" class="btn btn-outline btn-sm service-link" data-service="Physical Class (500k)">Reserve Your Seat</a>
+            <a href="#" class="btn btn-primary btn-sm pay-now-btn" data-service="Physical Class (Training Sessions)" data-amount="500000">Pay Now</a>
           </div>
         </div>
 
@@ -1000,6 +1015,101 @@
     });
     updateParallax();
   }
+</script>
+
+<!-- ============ PAYSTACK PAYMENT MODAL ============ -->
+<div class="pay-modal-overlay" id="payModalOverlay">
+  <div class="pay-modal">
+    <button class="pay-modal-close" id="payModalClose" aria-label="Close">&times;</button>
+    <p class="eyebrow">Secure Payment</p>
+    <h3>Complete Your Payment</h3>
+    <p class="pay-modal-service" id="payModalService"></p>
+    <p class="pay-modal-amount" id="payModalAmount"></p>
+    <form id="payModalForm">
+      <label for="payModalName">Full Name</label>
+      <input type="text" id="payModalName" required placeholder="Your full name" />
+      <label for="payModalEmail">Email Address</label>
+      <input type="email" id="payModalEmail" required placeholder="you@example.com" />
+      <p class="pay-modal-error" id="payModalError">Please enter a valid name and email.</p>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Pay Now</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script>
+  const PAYSTACK_PUBLIC_KEY = 'pk_live_5af4384c5a5adefe979c851023259d4c09d539a2';
+
+  const payModalOverlay = document.getElementById('payModalOverlay');
+  const payModalService = document.getElementById('payModalService');
+  const payModalAmount = document.getElementById('payModalAmount');
+  const payModalForm = document.getElementById('payModalForm');
+  const payModalName = document.getElementById('payModalName');
+  const payModalEmail = document.getElementById('payModalEmail');
+  const payModalError = document.getElementById('payModalError');
+  let currentPayAmountKobo = 0;
+  let currentPayService = '';
+
+  function openPayModal(serviceName, amountNaira){
+    currentPayService = serviceName;
+    currentPayAmountKobo = Math.round(amountNaira * 100);
+    payModalService.textContent = serviceName;
+    payModalAmount.textContent = '\u20A6' + amountNaira.toLocaleString('en-NG');
+    payModalError.style.display = 'none';
+    payModalForm.reset();
+    payModalOverlay.classList.add('open');
+  }
+  function closePayModal(){
+    payModalOverlay.classList.remove('open');
+  }
+
+  document.querySelectorAll('.pay-now-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const service = btn.dataset.service;
+      const amount = parseFloat(btn.dataset.amount);
+      openPayModal(service, amount);
+    });
+  });
+
+  document.getElementById('payModalClose').addEventListener('click', closePayModal);
+  payModalOverlay.addEventListener('click', (e) => {
+    if (e.target === payModalOverlay) closePayModal();
+  });
+
+  payModalForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = payModalName.value.trim();
+    const email = payModalEmail.value.trim();
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!name || !emailOk){
+      payModalError.style.display = 'block';
+      return;
+    }
+    payModalError.style.display = 'none';
+
+    const handler = PaystackPop.setup({
+      key: PAYSTACK_PUBLIC_KEY,
+      email: email,
+      amount: currentPayAmountKobo,
+      currency: 'NGN',
+      ref: 'MDL-' + Date.now() + '-' + Math.floor(Math.random() * 100000),
+      metadata: {
+        custom_fields: [
+          { display_name: "Full Name", variable_name: "full_name", value: name },
+          { display_name: "Service", variable_name: "service", value: currentPayService }
+        ]
+      },
+      callback: function(response){
+        closePayModal();
+        alert('Payment successful! Reference: ' + response.reference + '. We will reach out on WhatsApp to confirm your ' + currentPayService + '.');
+      },
+      onClose: function(){
+        // user closed the payment popup without paying
+      }
+    });
+    handler.openIframe();
+  });
 </script>
 </body>
 </html>
